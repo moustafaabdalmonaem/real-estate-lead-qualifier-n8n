@@ -1,0 +1,190 @@
+{
+  "name": "1. Sales - Real Estate Lead Qualifier (Fixed JSON Parsing)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-qualifier",
+        "options": {}
+      },
+      "id": "c492e229-22cd-4d44-9582-d30cb4ba39b8",
+      "name": "Postman Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -4992,
+        1008
+      ],
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.message.text }}"
+      },
+      "id": "3d2e0600-2fee-41ea-9158-c5573d8b803d",
+      "name": "Basic LLM Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        -4768,
+        1008
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "id": "157f5015-bc10-4e7f-9faa-9a27aaa51653",
+      "name": "Groq Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -4768,
+        1216
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_GROQAPI_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawText = $input.first().json.text || '';\nconst jsonMatch = rawText.match(/\\{[\\s\\S]*\\}/);\n\nif (jsonMatch) {\n  try {\n    const parsedData = JSON.parse(jsonMatch[0]);\n    return { json: parsedData };\n  } catch (e) {\n    return { json: { status: \"Cold\", rawResponse: rawText } };\n  }\n} else {\n  return { \n    json: { \n      status: \"Cold\", \n      notes: rawText,\n      budget: \"غير محدد\",\n      location: \"غير محدد\"\n    } \n  };\n}"
+      },
+      "id": "e4fa4bab-cddf-4de1-a9e8-954bc651af25",
+      "name": "Parse Lead Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4560,
+        1008
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status }}",
+              "value2": "Hot"
+            }
+          ]
+        }
+      },
+      "id": "6b82f9cc-8639-4e18-aa68-7d8db5f87a82",
+      "name": "Is Hot Lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -4336,
+        1008
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "==🔥 *إشعار عميل مهتم جداً (Hot Lead)* 🔥\n\n👤 *المستخدم:* @{{ $('Postman Webhook').item.json.body.message.from.username || 'بدون_مستخدم' }}\n\n💵 *الميزانية:* {{ $json.budget }}\n📍 *المنطقة:* {{ $json.location }}\n\n📝 *ملاحظات التقييم:*\n{{ $json.notes }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "65006b7b-995c-4e23-92fd-fd97f02ee0e8",
+      "name": "Notify Sales Team (Telegram)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        -4112,
+        896
+      ],
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_TELEGRAMAPI_CREDENTIAL_NAME"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Postman Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Parse Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Is Hot Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Hot Lead?": {
+      "main": [
+        [
+          {
+            "node": "Notify Sales Team (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Sales Team (Telegram)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "ea967985-5cb1-4588-abe8-e11ead53397c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}
